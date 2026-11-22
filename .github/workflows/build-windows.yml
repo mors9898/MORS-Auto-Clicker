@@ -30,7 +30,7 @@ jobs:
         run: |
           clang-cl /nologo /c /O2 /GS- /Zl /W3 /Fo:mors.obj mors.c
           if errorlevel 1 exit /b 1
-          link /nologo /subsystem:windows /entry:mainCRTStartup /out:MORS_Auto_Clicker.exe mors.obj kernel32.lib user32.lib gdi32.lib shell32.lib
+          link /nologo /subsystem:windows /entry:mainCRTStartup /out:MORS_Auto_Clicker.exe mors.obj kernel32.lib user32.lib gdi32.lib shell32.lib libcmt.lib vcruntime.lib ucrt.lib
           if errorlevel 1 exit /b 1
       - name: Upload Windows binary
         uses: actions/upload-artifact@v4
