@@ -1,0 +1,50 @@
+name: Build MORS Auto Clicker for Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - "source/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Restore source
+        shell: pwsh
+        run: |
+          @'
+          from pathlib import Path
+          import base64, lzma
+          encoded = Path("source/mors.c.xz.b64").read_text(encoding="utf-8").strip()
+          Path("mors.c").write_bytes(lzma.decompress(base64.b64decode(encoded)))
+          '@ | python -
+      - name: Configure Microsoft C++ build tools
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Compile Windows executable
+        shell: cmd
+        run: |
+          clang-cl /nologo /c /O2 /GS- /Zl /W3 /Fo:mors.obj mors.c
+          if errorlevel 1 exit /b 1
+          link /nologo /subsystem:windows /entry:mainCRTStartup /out:MORS_Auto_Clicker.exe mors.obj kernel32.lib user32.lib gdi32.lib shell32.lib
+          if errorlevel 1 exit /b 1
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: MORS-Auto-Clicker-Windows
+          path: MORS_Auto_Clicker.exe
+          if-no-files-found: error
+      - name: Publish beta release for direct download
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v0.1.0-beta *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v0.1.0-beta --title "MORS Auto Clicker 0.1.0 Beta" --notes "Experimental Windows x64 build. Not yet tested on a real Windows desktop. No installer or digital signature. Copyright 2026 MORS." --prerelease
+          }
+          gh release upload v0.1.0-beta MORS_Auto_Clicker.exe --clobber
